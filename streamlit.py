@@ -3,6 +3,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import joblib
+from fpdf import FPDF
+import datetime
 
 @st.cache_resource
 def load_model():
@@ -425,16 +427,145 @@ st.write(f"Environmental Score: {environmental_score}")
 combined_score = calculate_combined_score(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
 st.write(f"Combined Score: {combined_score}")
 
+# Mock-up function for generating the Vitiligo report as a PDF
+def generate_vitiligo_report(patient_name, age, gender, date, diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score, prediction):
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Header
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, "Vitiligo Assessment Report", ln=True, align='C')
+
+    # Patient Info
+    pdf.set_font("Arial", '', 12)
+    pdf.cell(200, 10, f"Patient Name: {patient_name}", ln=True)
+    pdf.cell(200, 10, f"Age: {age}", ln=True)
+    pdf.cell(200, 10, f"Gender: {gender}", ln=True)
+    pdf.cell(200, 10, f"Date: {date}", ln=True)
+    
+    pdf.ln(10)  # Space before diagnostics
+
+    # Diagnostics Section
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, "Diagnostic Report", ln=True)
+
+    # Family History Section
+    responses = {}
+
+    pdf.set_font("Arial", '', 12)
 
 
-# Reshape combined score into the format your model expects (e.g., 2D array for scikit-learn)
+# Checking conditions for family history and personal history based on the new questions
+    pdf.set_font("Arial", '', 12)
+    if family_score >= 10:
+        pdf.cell(200, 10, "Family History: High Risk", ln=True)
+    elif 5 <= family_score < 10:
+        pdf.cell(200, 10, "Family History: Moderate Risk", ln=True)
+    else:
+        pdf.cell(200, 10, "Family History: Low Risk", ln=True)
+
+    pdf.ln(10) 
+    
+    # Dietary Section
+    if 0 <= diet_score < 28:
+        pdf.cell(200, 10, "Dietary Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "Description: Minimal dietary exposure related to vitiligo risk.", ln=True)
+    elif 29 <= diet_score < 56:
+        pdf.cell(200, 10, "Dietary Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "Description: Moderate dietary exposure; review of eating habits recommended.", ln=True)
+    elif 57 <= diet_score < 84:
+        pdf.cell(200, 10, "Dietary Section: High Risk", ln=True)
+        pdf.cell(200, 10, "Description: Significant dietary influence linked to vitiligo; dietary changes advised.", ln=True)
+    else:
+        pdf.cell(200, 10, "Dietary Section: Very High Risk", ln=True)
+        pdf.cell(200, 10, "Description: Strong dietary factors likely causing or exacerbating vitiligo; immediate action required.", ln=True)
+        
+    pdf.ln(10) 
+    
+    # Lifestyle Section
+    if 0 <= lifestyle_score < 15:
+        pdf.cell(200, 10, "Lifestyle Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "Description: Minimal lifestyle-related issues.", ln=True)
+    elif 16 <= lifestyle_score < 30:
+        pdf.cell(200, 10, "Lifestyle Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "Description: Moderate lifestyle-related issues; attention recommended", ln=True)
+    else:
+        pdf.cell(200, 10, "Lifestyle Section: High Risk", ln=True)
+        pdf.cell(200, 10, "Description: High levels of lifestyle-related issues; action advised.", ln=True)
+    
+    pdf.ln(10) 
+
+    # Psychological Section
+    if 0 <= psychological_score < 10:
+        pdf.cell(200, 10, "Psychological Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "Description: Minimal stress and anxiety-related experiences.", ln=True)
+    elif 11 <= psychological_score < 25:
+        pdf.cell(200, 10, "Psychological Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "Description: Moderate levels of stress and anxiety; attention recommended.", ln=True)
+    else:
+        pdf.cell(200, 10, "Psychological Section: High Risk", ln=True)
+        pdf.cell(200, 10, "Description: High levels of stress, anxiety, and moral distress; action advised", ln=True)
+    
+    pdf.ln(10) 
+
+    # Environmental Section
+    if 0 <= environmental_score < 5:
+        pdf.cell(200, 10, "Environmental Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "Description: Minimal exposure to environmental factors; low health risk.", ln=True)
+
+    elif 6 <= environmental_score < 10:
+        pdf.cell(200, 10, "Environmental Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "Description: Moderate exposure to environmental factors; some concern.", ln=True)
+    else:
+        pdf.cell(200, 10, "Environmental Section: High Risk", ln=True)
+        pdf.cell(200, 10, "Description: High levels of exposure to environmental factors; urgent action needed.", ln=True)
+
+    # Overall Diagnosis
+    # Overall Diagnosis
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 14)
+    pdf.cell(200, 10, "Overall Diagnosis", ln=True)
+
+# Adjust font for the description
+    pdf.set_font("Arial", '', 12)
+
+# Add descriptive text based on the prediction value
+    # Overall Diagnosis
+    pdf.ln(10)  # Add a new line before the diagnosis section
+    pdf.set_font("Arial", 'B', 14)
+
+# Determine risk levels based on prediction
+    if prediction == "Low Risk":
+        pdf.cell(200, 10, "Overall Risk: Low Risk", ln=True)
+        pdf.multi_cell(0, 10, "The assessment indicates that there is a low likelihood of vitiligo based on "
+                          "the provided information. While maintaining a healthy lifestyle is important, "
+                          "there are no significant risk factors present at this time.")
+
+    elif prediction == "Moderate Risk":
+        pdf.cell(200, 10, "Overall Risk: Moderate Risk", ln=True)
+        pdf.multi_cell(0, 10, "The assessment suggests a moderate risk of vitiligo. While there are some risk factors "
+                          "present, the likelihood is not high. It is advisable to monitor any changes and "
+                          "consider consulting a healthcare professional for further evaluation.")
+
+    else:  # High Risk case
+        pdf.cell(200, 10, "Overall Risk: High Risk", ln=True)
+        pdf.multi_cell(0, 10, "The assessment points to a high risk of vitiligo based on significant risk factors, "
+                          "including personal or family history. Immediate medical consultation is recommended "
+                          "for early intervention and management.")
 
 
 
-# Calculate combined score
-combined_score = calculate_combined_score(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
-st.write(f"Combined Score: {combined_score}")
+    # Disclaimer
+    pdf.ln(10)
+    pdf.cell(200, 10, "Disclaimer: This report is generated by AI-based software. Please consult a doctor.", ln=True)
 
+    # Save the report
+    report_path = f"{patient_name}_vitiligo_report.pdf"
+    pdf.output(report_path)
+
+    return report_path
+
+# Function to predict vitiligo risk (replace with your actual model)
 def predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score):
     # Reshape the scores into the format your model expects (e.g., 2D array for scikit-learn)
     scores_input = np.array([[diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score]])
@@ -448,16 +579,70 @@ def predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psyc
 
     return prediction
 
+# Main code that calculates section scores (replace with actual section score calculation logic)
+def calculate_scores():
+    
+    return diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score
 
-# Initialize prediction result variable
-prediction_result = None
+# Streamlit app code
+st.title("Vitiligo Assessment Tool")
 
-# Prediction button
+# Collect Patient Information
+st.header("Patient Information")
+patient_name = st.text_input("Patient Name")
+age = st.number_input("Age", min_value=0, max_value=120, value=30)
+gender = st.selectbox("Gender", ("Male", "Female", "Other"))
+date = st.date_input("Date")
+
+# Fetch the calculated section scores from the main code
+diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score = calculate_scores()
+
+# Display section scores
+st.header("Calculated Scores")
+st.write(f"Diet Score: {diet_score}")
+st.write(f"Environmental Score: {environmental_score}")
+st.write(f"Lifestyle Score: {lifestyle_score}")
+st.write(f"Psychological Score: {psychological_score}")
+st.write(f"Family Score: {family_score}")
+st.write(f"Combined Score: {combined_score}")
+
+# Predict button and result
 if st.button("Predict Risk Level"):
-    # Call the prediction function with all relevant scores
-    prediction_result = predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score)
+    prediction = predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score)
 
-# Display the prediction result only if it exists
-if prediction_result is not None:
+    # Save the prediction in session state
+    st.session_state.prediction = prediction
+
+    # Show the predicted risk level
     st.header("Predicted Vitiligo Risk Level")
-    st.write(f"The predicted risk level is: {prediction_result}")
+    st.write(f"The predicted risk level is: {prediction}")
+
+# Button to generate and download the PDF report
+if st.button("Download Report"):
+    # Ensure prediction is available in session state
+    
+    if "prediction" in st.session_state:
+        prediction = st.session_state.prediction
+         # This will display the dictionary content
+        report_path = generate_vitiligo_report(
+        patient_name,
+        age,
+        gender,
+        date,
+        diet_score,
+        environmental_score,
+        lifestyle_score,
+        psychological_score,
+        family_score,
+        combined_score,
+        prediction
+    )
+
+    
+        
+        # Provide download link
+        with open(report_path, "rb") as file:
+            pdf_data = file.read()  # Read the file content as binary data
+            btn = st.download_button(label="Download Vitiligo Report", data=pdf_data, file_name=report_path, mime="application/pdf")
+    else:
+        st.error("Please click on 'Predict Risk Level' before downloading the report.")
