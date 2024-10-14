@@ -531,8 +531,8 @@ def generate_vitiligo_report(patient_name, age, gender, date, diet_score, enviro
 
 # Add descriptive text based on the prediction value
     # Overall Diagnosis
-    pdf.ln(10)  # Add a new line before the diagnosis section
-    pdf.set_font("Arial", 'B', 14)
+    #pdf.ln(10)  # Add a new line before the diagnosis section
+    pdf.set_font("Arial", 'B', 12)
 
 # Determine risk levels based on prediction
     if prediction == "Low Risk":
