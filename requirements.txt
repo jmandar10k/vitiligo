@@ -2,3 +2,5 @@ joblib
 scikit-learn
 datetime
 fpdf
+matplotlib
+reportlab
