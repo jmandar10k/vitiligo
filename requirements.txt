@@ -8,3 +8,4 @@ reportlab
 email==6.0.0 
 smtplib
 os
+--upgrade pip
