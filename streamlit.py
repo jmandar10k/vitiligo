@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import os
-import cv2
+import opencv-python
 from PIL import Image
 from tensorflow.keras.models import load_model
 
@@ -25,37 +25,37 @@ resnet_model = load_model(resnet_model_path)
 # Function to apply Wood's lamp effect
 def apply_wood_lamp_effect(image):
     # Convert the image to grayscale
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray_image = opencv.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Apply CLAHE to enhance contrast
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    clahe = opencv.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
     contrast_enhanced = clahe.apply(gray_image)
 
     # Apply a blue color map to mimic the Wood's lamp appearance
-    wood_lamp_effect = cv2.applyColorMap(contrast_enhanced, cv2.COLORMAP_OCEAN)
+    wood_lamp_effect = opencv.applyColorMap(contrast_enhanced, cv2.COLORMAP_OCEAN)
 
     # Blend the original image with the Wood's lamp effect for a more natural look
-    blended = cv2.addWeighted(image, 0.5, wood_lamp_effect, 0.5, 0)
+    blended = opencv.addWeighted(image, 0.5, wood_lamp_effect, 0.5, 0)
 
     return blended, contrast_enhanced
 
 # Function to create a heatmap for white patches (potential vitiligo areas)
 def create_heatmap(gray_image):
     # Threshold to identify potential vitiligo patches
-    _, thresholded = cv2.threshold(gray_image, 180, 255, cv2.THRESH_BINARY)
+    _, thresholded = opencv.threshold(gray_image, 180, 255, cv2.THRESH_BINARY)
 
     # Create a heatmap
-    heatmap = cv2.applyColorMap(thresholded, cv2.COLORMAP_JET)
+    heatmap = opencv.applyColorMap(thresholded, cv2.COLORMAP_JET)
 
     return heatmap
 
 # Function to convert the image to grayscale
 def convert_to_grayscale(image):
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    return opencv.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
 # Function to preprocess the input image for prediction (Resize to 224x224)
 def preprocess_image(image, target_size=(224, 224)):
-    image_resized = cv2.resize(image, target_size)  # Resize the image to (224, 224)
+    image_resized = opencv.resize(image, target_size)  # Resize the image to (224, 224)
     image_normalized = image_resized / 255.0  # Normalize pixel values to [0, 1]
     return np.expand_dims(image_normalized, axis=0)  # Add batch dimension
 
