@@ -8,6 +8,13 @@ import datetime
 import matplotlib.pyplot as plt
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+import os
+
  
 @st.cache_resource
 def load_model():
@@ -1025,3 +1032,57 @@ if st.button("Download Report"):
     
     else:
         st.error("Please click on 'Predict Risk Level' before downloading the report.")
+
+
+
+
+
+# Function to send the email
+def send_email(receiver_email, pdf_file):
+    sender_email = "jmandar1322@gmail.com"
+    EMAIL_PASSWORD = "rsai nmjq hsvo zqrm"  # Replace with your app-specific password
+
+    # Create email header
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = "Your Vitiligo Assessment Report"
+
+    # Email body
+    body = f"Hey {patient_name}  Please find your Attached Vitiligo Assessment Report."
+    msg.attach(MIMEText(body, 'plain'))
+
+    # Attach the existing PDF
+    with open(pdf_file, "rb") as attachment:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(attachment.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f"attachment; filename= {os.path.basename(pdf_file)}")
+        msg.attach(part)
+
+    # Create the SMTP session for sending the email
+    try:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, EMAIL_PASSWORD)
+        text = msg.as_string()
+        server.sendmail(sender_email, receiver_email, text)
+        server.quit()
+        st.success("Email sent successfully!")
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+# Streamlit app
+st.title("Vitiligo Assessment Report Sender")
+
+# Input for recipient email
+receiver_email = st.text_input("Enter the recipient's email address")
+
+# Specify the path to the existing PDF file
+pdf_file = f"{patient_name}_vitiligo_report.pdf" # Make sure this file exists in the working directory
+
+if st.button("Send Report"):
+    if receiver_email:
+        send_email(receiver_email, pdf_file)
+    else:
+        st.error("Please enter a recipient email address.")
