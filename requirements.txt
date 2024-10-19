@@ -1,9 +1,10 @@
 joblib
+streamlit
 scikit-learn
 datetime
 fpdf
 matplotlib
 reportlab
-email
+email==6.0.0 
 smtplib
 os
