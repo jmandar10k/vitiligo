@@ -5,6 +5,6 @@ fpdf
 matplotlib
 reportlab
 opencv-python
-PIL
+Pillow
 tensorflow
 
