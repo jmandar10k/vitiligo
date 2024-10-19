@@ -14,7 +14,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import os
-import opencv-python
+import opencv
 from PIL import Image
 from tensorflow.keras.models import load_model
 
