@@ -5,7 +5,10 @@ import pandas as pd
 import joblib
 from fpdf import FPDF
 import datetime
-
+import matplotlib.pyplot as plt
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+ 
 @st.cache_resource
 def load_model():
     # Provide the full path to your model file here
@@ -397,6 +400,165 @@ def environmental_section():
 
     return environmental_score
 
+
+
+
+
+# Function to determine the type of vitiligo based on user input
+def determine_vitiligo_type(responses):
+    vitiligo_types = set()
+
+    # Logic for location of spot on face
+    if 'at the openings(lips/nostrils/ears)' in responses['face']:
+        vitiligo_types.add('Acrofacial vitiligo (due to spots on the face openings).')
+    if 'on one side of the face' in responses['face']:
+        vitiligo_types.add('Segmental vitiligo (due to spots on one side of the face).')
+    if 'on both sides of the face' in responses['face']:
+        vitiligo_types.add('Non-segmental vitiligo (due to spots on both sides of the face).')
+    if 'just one spot on face' in responses['face']:
+        vitiligo_types.add('Focal vitiligo (due to a single spot on the face).')
+
+    # Logic for location of spot on hands and feet
+    if 'at the ends of limbs(fingers / toes)' in responses['hands_feet']:
+        vitiligo_types.add('Acrofacial vitiligo (due to spots on the fingers).')
+    if 'on both hands or feet' in responses['hands_feet']:
+        vitiligo_types.add('Non-segmental vitiligo (due to spots on both hands or feet).')
+    if 'on only one hand or feet' in responses['hands_feet']:
+        vitiligo_types.add('Segmental vitiligo (due to spots on only one hand or foot).')
+
+    # Logic for location of spot on arms and legs
+    if 'on both arms or legs' in responses['arms_legs']:
+        vitiligo_types.add('Non-segmental vitiligo (due to spots on both arms or legs).')
+    if 'on only one arm or leg' in responses['arms_legs']:
+        vitiligo_types.add('Segmental vitiligo (due to spots on only one arm or leg).')
+
+    # Logic for depigmentation over 80% of the body
+    if 'yes' in responses['whole_body']:
+        vitiligo_types.add('Universal vitiligo (due to depigmentation affecting over 80% of the body).')
+
+    # Return the vitiligo type(s)
+    if vitiligo_types:
+        return ', '.join(vitiligo_types)
+    else:
+        return 'Unknown type'
+
+# function to determine the health of disease 
+# Function to generate insights and conclusion based on user responses
+def generate_insights_and_conclusion(white_patches, patch_shape, expanding_patches, patch_duration, sensations, color_change, new_patches, visibility_in_sunlight):
+    insights = []
+    
+    # Insights for white patches
+    if white_patches == 'Yes':
+        insights.append("1) The patient has white patches, which can suggest depigmentation-related conditions like vitiligo.")
+        
+        # Shape of patches
+        if patch_shape == 'Irregular':
+            insights.append(" 2) Irregular shapes can indicate an active, progressive phase of vitiligo, compared to round/oval shapes, which might signify more stable patches.")
+        elif patch_shape in ['Round', 'Oval']:
+            insights.append(" 2) Round/oval shapes may indicate more stable vitiligo patches.")
+        else:
+            insights.append(" 2) Uncertain shape may require further observation.")
+
+        # Expansion over time
+        if expanding_patches == 'Yes, they are growing':
+            insights.append(" 3) The condition is still progressing, and the patches are likely spreading, which could require more aggressive treatment.")
+        elif expanding_patches == 'No, they have remained the same size':
+            insights.append(" 3) The vitiligo appears stable without active spreading.")
+        else:
+            insights.append(" 3) Uncertainty about patch expansion may require monitoring.")
+        
+        # Duration of condition
+        if patch_duration in ['6-12 months', 'More than 1 year']:
+            insights.append("4) The patient has been experiencing symptoms for a significant period, suggesting chronic vitiligo.")
+        elif patch_duration in ['Less than 3 months', '3-6 months']:
+            insights.append("4) A relatively recent onset, which may indicate early-stage vitiligo.")
+
+        # Sensations
+        if sensations == 'No, no sensations':
+            insights.append("5) Lack of sensations like itching or pain can rule out inflammatory skin conditions, as vitiligo typically doesn’t involve sensory symptoms.")
+        else:
+            insights.append(f"5) The presence of {sensations} might require additional investigation for other skin conditions.")
+
+        # Color change over time
+        if color_change == 'Yes, they have lightened over time':
+            insights.append("6) Depigmentation has progressed from partial loss of skin color to complete depigmentation, a hallmark of vitiligo progression.")
+        else:
+            insights.append("6) The patches have remained stable in color.")
+        
+        # New patches
+        if new_patches == 'Yes, within the last 3 months':
+            insights.append("7) New patches indicate active vitiligo, suggesting the disease is still spreading.")
+        else:
+            insights.append("7) No new patches suggest stability.")
+
+        # Visibility in sunlight
+        if visibility_in_sunlight == 'Yes, they are more noticeable':
+            insights.append("8) The contrast between normal skin and depigmented patches increases when the skin tans, often seen in vitiligo.")
+        else:
+            insights.append("8) No change in visibility suggests the patches may blend more with the skin tone.")
+    
+    else:
+        insights.append("Insight: No white patches indicate vitiligo may not be present.")
+
+    # Conclusion based on the responses
+    conclusion = "From these responses, we gather that the patient is "
+    
+    if expanding_patches == 'Yes, they are growing' or new_patches == 'Yes, within the last 3 months':
+        conclusion += "likely dealing with progressive vitiligo. The condition is still spreading, as "
+        if expanding_patches == 'Yes, they are growing':
+            conclusion += "existing patches have grown larger, "
+        if new_patches == 'Yes, within the last 3 months':
+            conclusion += "new patches have appeared recently, "
+        conclusion = conclusion.rstrip(", ") + ". "
+    else:
+        conclusion += "likely dealing with stable vitiligo, as there has been no significant spread of the patches. "
+
+    if sensations == 'No, no sensations':
+        conclusion += "The lack of pain or itching helps distinguish it from other skin conditions like eczema or psoriasis, which often involve these symptoms. "
+
+    if visibility_in_sunlight == 'Yes, they are more noticeable':
+        conclusion += "The increased visibility of the patches in sunlight supports the diagnosis of vitiligo, as tanning makes the depigmentation more apparent. "
+
+    conclusion += "Overall, the responses suggest that "
+    if expanding_patches == 'Yes, they are growing' or new_patches == 'Yes, within the last 3 months':
+        conclusion += "the condition is still active and progressing."
+    else:
+        conclusion += "the condition is stable and not actively spreading."
+
+    return insights, conclusion
+
+# pie chart 
+
+import matplotlib.pyplot as plt
+
+def create_pie_chart(family_score, diet_score, lifestyle_score, psychological_score, environmental_score):
+    # Create a dictionary of scores
+    scores = {
+        'Family Score': family_score,
+        'Diet Score': diet_score,
+        'Lifestyle Score': lifestyle_score,
+        'Psychological Score': psychological_score,
+        'Environmental Score': environmental_score,
+    }
+
+    # Create a pie chart
+    labels = scores.keys()
+    sizes = scores.values()
+    colors = ['#ff9999', '#66b3ff', '#99ff99', '#ffcc99', '#c2c2f0']
+
+    plt.figure(figsize=(8, 8))
+    plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=140)
+    plt.axis('equal')  # Equal aspect ratio ensures that pie chart is a circle.
+
+    # Save the pie chart as an image
+    chart_path = "pie_chart.png"
+    plt.savefig(chart_path)
+    plt.close()  # Close the figure
+
+    return chart_path
+
+
+
 # Streamlit UI
 st.title("Vitiligo Risk Prediction")
 
@@ -423,147 +585,353 @@ st.write(f"Psychological Health Score: {psychological_score}")
 environmental_score = environmental_section()
 st.write(f"Environmental Score: {environmental_score}")
 
+
+
+# Section for Vitiligo Lesion Questionnaire
+# Header for the questionnaire
+st.header("Vitiligo Lesion Questionnaire")
+report_text = ""
+vitiligo_type = ""
+
+# Main questions with subquestions and options
+responses = {}
+
+# Location of spots on the face
+responses['face'] = st.multiselect(
+    'Location of spot on face?',
+    ['at the openings(lips/nostrils/ears)',
+     'on one side of the face',
+     'on both sides of the face',
+     'just one spot on face'],
+    key='face_multiselect'  # Unique key for this multiselect
+)
+
+# Location of spots on hands and feet
+responses['hands_feet'] = st.multiselect(
+    'Location of spot on hands and feet?',
+    ['at the ends of limbs(fingers / toes)',
+     'on both hands or feet',
+     'on only one hand or feet'],
+    key='hands_feet_multiselect'  # Unique key for this multiselect
+)
+
+# Location of spots on arms and legs
+responses['arms_legs'] = st.multiselect(
+    'Location of spot on arms and legs?',
+    ['on both arms or legs',
+     'on only one arm or leg'],
+    key='arms_legs_multiselect'  # Unique key for this multiselect
+)
+
+# Whole body depigmentation question
+responses['whole_body'] = st.multiselect(
+    'Do you have around 80 to more than 80% body depigmentation?',
+    ['yes', 'no'],
+    key='whole_body_multiselect'  # Unique key for this multiselect
+)
+# Button to submit the questionnaire
+
+# Button to submit the questionnaire
+if st.button('Submit', key='submit_button'):  # Unique key for this button
+    # Determine vitiligo type based on responses
+    vitiligo_type = determine_vitiligo_type(responses)
+    
+    # Display the result
+    st.subheader(f"Based on your responses, the type of vitiligo is: {vitiligo_type}")
+
+    # Adding vitiligo type to the PDF report
+    report_text += f"Vitiligo Assessment:\nType of Vitiligo: {vitiligo_type}\n"
+
+#new
+
+st.title("Vitiligo Progression Questionnaire")
+
+# Questions
+white_patches = st.radio("Do you have any white patches on your skin?", ['Yes', 'No'])
+
+if white_patches == 'Yes':
+    patch_shape = st.radio("What is the shape of the white patches?", ['Round', 'Oval', 'Irregular', 'Not sure'])
+    expanding_patches = st.radio("Are the white patches expanding over time?", 
+                                 ['Yes, they are growing', 'No, they have remained the same size', 'Not sure'])
+    patch_duration = st.radio("How long have you had the white patches on your body?", 
+                              ['Less than 3 months', '3-6 months', '6-12 months', 'More than 1 year'])
+    sensations = st.radio("Do you experience any sensations (e.g., itching, pain) in or around the white patches?", 
+                          ['Yes, itching', 'Yes, pain', 'No, no sensations', 'Not sure'])
+    color_change = st.radio("Have the patches changed in color over time (e.g., from light to completely white)?", 
+                            ['Yes, they have lightened over time', 'No, they have remained the same color', 'Not sure'])
+    new_patches = st.radio("Have you noticed any new white patches appearing recently?", 
+                           ['Yes, within the last 3 months', 'No, no new patches', 'Not sure'])
+    visibility_in_sunlight = st.radio("Do the patches become more noticeable in sunlight or when your skin tans?", 
+                                      ['Yes, they are more noticeable', 'No, there’s no change', 'Not sure'])
+else:
+    # If the user answers 'No', you can assign default values to the other variables.
+    patch_shape =expanding_patches= patch_duration = sensations = color_change = new_patches = visibility_in_sunlight = None
+
+# Submit button
+
+
+# if st.button("Submit"):
+#     # Ensure all necessary variables are defined
+#     if white_patches == 'Yes':
+#         # Generate insights and conclusion
+#         insights, conclusion = generate_insights_and_conclusion(
+#             white_patches, patch_shape, expanding_patches, patch_duration, sensations, color_change, new_patches, visibility_in_sunlight
+#         )
+
+#         # Insights Section
+#         st.subheader("Insights:")
+#         for insight in insights:
+#             st.write(insight)
+
+#         # Conclusion Section
+#         st.subheader("Conclusion:")
+#         st.write(conclusion)
+#     else:
+#         # If no white patches, you might want to display a different message
+#         st.subheader("Conclusion:")
+#         st.write("No white patches indicate vitiligo may not be present.")
+
+
+# Submit button
+if st.button("Submit"):
+    # Ensure all necessary variables are defined
+    if white_patches == 'Yes':
+        # Generate insights and conclusion
+        insights, conclusion = generate_insights_and_conclusion(
+            white_patches, patch_shape, expanding_patches, patch_duration, sensations, color_change, new_patches, visibility_in_sunlight
+        )
+        
+        # Store insights and conclusion without displaying them
+        st.session_state.insights = insights
+        st.session_state.conclusion = conclusion
+        
+    else:
+        # If no white patches, you might want to display a different message
+        st.session_state.insights = []
+        st.session_state.conclusion = "No white patches indicate vitiligo may not be present."
+
+
+
+
+
+
 # Calculate combined score
 combined_score = calculate_combined_score(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
 st.write(f"Combined Score: {combined_score}")
 
+#pie streamlit
+
+
+# Button to generate pie chart
+# Initialize session state for the pie chart path
+if 'chart_path' not in st.session_state:
+    st.session_state.chart_path = None
+
+# Generate and save the Score Pie Chart when button is clicked
+if st.button("Generate Score Pie Chart"):
+    st.session_state.chart_path = create_pie_chart(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
+
+# # Display the pie chart if it exists in session state
+# if st.session_state.chart_path:
+#     st.image(st.session_state.chart_path, caption="Score Distribution Pie Chart", use_column_width=True)
+
+
+
+
+
+
 # Mock-up function for generating the Vitiligo report as a PDF
-def generate_vitiligo_report(patient_name, age, gender, date, diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score, prediction):
+from fpdf import FPDF
+
+def generate_vitiligo_report(patient_name, age, gender, date, diet_score, environmental_score, lifestyle_score, 
+                              psychological_score, family_score, combined_score, prediction, insights, conclusion):
     pdf = FPDF()
     pdf.add_page()
 
-    # Header
+       # Header
     pdf.set_font("Arial", 'B', 16)
+    pdf.set_text_color(0, 102, 204)  # Blue color
     pdf.cell(200, 10, "Vitiligo Assessment Report", ln=True, align='C')
 
-    # Patient Info
+    # Reset text color to black for patient info
+    pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", '', 12)
     pdf.cell(200, 10, f"Patient Name: {patient_name}", ln=True)
     pdf.cell(200, 10, f"Age: {age}", ln=True)
     pdf.cell(200, 10, f"Gender: {gender}", ln=True)
     pdf.cell(200, 10, f"Date: {date}", ln=True)
-    
-    pdf.ln(10)  # Space before diagnostics
+
+    pdf.ln(20)  # Space before diagnostics
 
     # Diagnostics Section
     pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 102, 204)  # Blue color
     pdf.cell(200, 10, "Diagnostic Report", ln=True)
 
     # Family History Section
-    responses = {}
-
     pdf.set_font("Arial", '', 12)
-
-
-# Checking conditions for family history and personal history based on the new questions
-    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(0, 0, 0)  # Black color
     if family_score >= 10:
-        pdf.cell(200, 10, "Family History: High Risk", ln=True)
+        pdf.cell(200, 10, "1)Family History: High Risk", ln=True)
     elif 5 <= family_score < 10:
-        pdf.cell(200, 10, "Family History: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "1)Family History: Moderate Risk", ln=True)
     else:
-        pdf.cell(200, 10, "Family History: Low Risk", ln=True)
+        pdf.cell(200, 10, "1)Family History: Low Risk", ln=True)
 
-    pdf.ln(10) 
-    
+    pdf.ln(5)
+
     # Dietary Section
+    pdf.set_text_color(0, 0, 0)  # Black color
     if 0 <= diet_score < 28:
-        pdf.cell(200, 10, "Dietary Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "2)Dietary Section: Low Risk", ln=True)
         pdf.cell(200, 10, "Description: Minimal dietary exposure related to vitiligo risk.", ln=True)
     elif 29 <= diet_score < 56:
-        pdf.cell(200, 10, "Dietary Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "2)Dietary Section: Moderate Risk", ln=True)
         pdf.cell(200, 10, "Description: Moderate dietary exposure; review of eating habits recommended.", ln=True)
     elif 57 <= diet_score < 84:
-        pdf.cell(200, 10, "Dietary Section: High Risk", ln=True)
+        pdf.cell(200, 10, "2)Dietary Section: High Risk", ln=True)
         pdf.cell(200, 10, "Description: Significant dietary influence linked to vitiligo; dietary changes advised.", ln=True)
     else:
         pdf.cell(200, 10, "Dietary Section: Very High Risk", ln=True)
         pdf.cell(200, 10, "Description: Strong dietary factors likely causing or exacerbating vitiligo; immediate action required.", ln=True)
-        
-    pdf.ln(10) 
-    
+
+    pdf.ln(5)
+
     # Lifestyle Section
     if 0 <= lifestyle_score < 15:
-        pdf.cell(200, 10, "Lifestyle Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "3)Lifestyle Section: Low Risk", ln=True)
         pdf.cell(200, 10, "Description: Minimal lifestyle-related issues.", ln=True)
     elif 16 <= lifestyle_score < 30:
-        pdf.cell(200, 10, "Lifestyle Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "3)Lifestyle Section: Moderate Risk", ln=True)
         pdf.cell(200, 10, "Description: Moderate lifestyle-related issues; attention recommended", ln=True)
     else:
-        pdf.cell(200, 10, "Lifestyle Section: High Risk", ln=True)
+        pdf.cell(200, 10, "3)Lifestyle Section: High Risk", ln=True)
         pdf.cell(200, 10, "Description: High levels of lifestyle-related issues; action advised.", ln=True)
-    
-    pdf.ln(10) 
+
+    pdf.ln(5)
 
     # Psychological Section
     if 0 <= psychological_score < 10:
-        pdf.cell(200, 10, "Psychological Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "4)Psychological Section: Low Risk", ln=True)
         pdf.cell(200, 10, "Description: Minimal stress and anxiety-related experiences.", ln=True)
     elif 11 <= psychological_score < 25:
-        pdf.cell(200, 10, "Psychological Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "4)Psychological Section: Moderate Risk", ln=True)
         pdf.cell(200, 10, "Description: Moderate levels of stress and anxiety; attention recommended.", ln=True)
     else:
-        pdf.cell(200, 10, "Psychological Section: High Risk", ln=True)
+        pdf.cell(200, 10, "4)Psychological Section: High Risk", ln=True)
         pdf.cell(200, 10, "Description: High levels of stress, anxiety, and moral distress; action advised", ln=True)
-    
-    pdf.ln(10) 
+
+    pdf.ln(5)
 
     # Environmental Section
     if 0 <= environmental_score < 5:
-        pdf.cell(200, 10, "Environmental Section: Low Risk", ln=True)
+        pdf.cell(200, 10, "5)Environmental Section: Low Risk", ln=True)
         pdf.cell(200, 10, "Description: Minimal exposure to environmental factors; low health risk.", ln=True)
-
     elif 6 <= environmental_score < 10:
-        pdf.cell(200, 10, "Environmental Section: Moderate Risk", ln=True)
+        pdf.cell(200, 10, "5)Environmental Section: Moderate Risk", ln=True)
         pdf.cell(200, 10, "Description: Moderate exposure to environmental factors; some concern.", ln=True)
     else:
-        pdf.cell(200, 10, "Environmental Section: High Risk", ln=True)
+        pdf.cell(200, 10, "5)Environmental Section: High Risk", ln=True)
         pdf.cell(200, 10, "Description: High levels of exposure to environmental factors; urgent action needed.", ln=True)
 
-    # Overall Diagnosis
+    pdf.ln(20)
+
+    # Vitiligo Assessment Section
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 102, 204)  # Blue color
+    pdf.cell(200, 10, "Vitiligo Assessment Section", ln=True)
+
+    # Assuming you have a variable vitiligo_type defined somewhere
+    vitiligo_type = determine_vitiligo_type(responses)  # Replace with actual logic to determine vitiligo type
+    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(0, 0, 0)  # Black color
+    if vitiligo_type:
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(200, 10, "Type of Vitiligo:", ln=True)
+        pdf.cell(200, 10, f"Type of Vitiligo: {vitiligo_type}", ln=True)
+    else:
+        pdf.cell(200, 10, "Type of Vitiligo: Unknown", ln=True)
+
+    pdf.ln(20)  # Space before insights
+
+    # Insights Section
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 102, 204)  # Blue color
+    pdf.cell(200, 10, "Insights:", ln=True)
+    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(0, 0, 0)  # Black color
+    for insight in insights:
+        pdf.multi_cell(0, 10, insight)
+
+    pdf.ln(20)  # Space before conclusion
+
+    # Conclusion Section
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 102, 204)  # Blue color
+    pdf.cell(200, 10, "Conclusion:", ln=True)
+    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(0, 0, 0)  # Black color
+    pdf.multi_cell(0, 10, conclusion)
+
+    pdf.ln(20)  # Space before conclusion
+
+    # Add Pie Chart
+    
+    pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 102, 204)  # Blue color
+    pdf.cell(200, 10, "Risk Distribution:", ln=True)
+    pdf.multi_cell(0, 10, "The following Pie chart narrate the information about contribution of each sections"
+                    "if a person having vitiligo,so we get the actual cause of disease. ")
+
+    chart_path = create_pie_chart(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
+
+    # Insert the pie chart image
+    pdf.image(chart_path, x=50, y=None, w=100, h=100)
+
     # Overall Diagnosis
     pdf.ln(10)
     pdf.set_font("Arial", 'B', 14)
+    pdf.set_text_color(0, 102, 204)  # Blue color
     pdf.cell(200, 10, "Overall Diagnosis", ln=True)
 
-# Adjust font for the description
+    # Adjust font for the description
     pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(0, 0, 0)  # Black color
 
-# Add descriptive text based on the prediction value
-    # Overall Diagnosis
-    #pdf.ln(10)  # Add a new line before the diagnosis section
+    # Add descriptive text based on the prediction value
     pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(0, 0, 0)  # Black color
 
-# Determine risk levels based on prediction
+    # Determine risk levels based on prediction
     if prediction == "Low Risk":
         pdf.cell(200, 10, "Overall Risk: Low Risk", ln=True)
         pdf.multi_cell(0, 10, "The assessment indicates that there is a low likelihood of vitiligo based on "
-                          "the provided information. While maintaining a healthy lifestyle is important, "
-                          "there are no significant risk factors present at this time.")
+                            "the provided information. While maintaining a healthy lifestyle is important, "
+                            "there are no significant risk factors present at this time.")
 
     elif prediction == "Moderate Risk":
         pdf.cell(200, 10, "Overall Risk: Moderate Risk", ln=True)
         pdf.multi_cell(0, 10, "The assessment suggests a moderate risk of vitiligo. While there are some risk factors "
-                          "present, the likelihood is not high. It is advisable to monitor any changes and "
-                          "consider consulting a healthcare professional for further evaluation.")
+                            "present, the likelihood is not high. It is advisable to monitor any changes and "
+                            "consider consulting a healthcare professional for further evaluation.")
 
     else:  # High Risk case
         pdf.cell(200, 10, "Overall Risk: High Risk", ln=True)
         pdf.multi_cell(0, 10, "The assessment points to a high risk of vitiligo based on significant risk factors, "
-                          "including personal or family history. Immediate medical consultation is recommended "
-                          "for early intervention and management.")
-
-
+                            "including personal or family history. Immediate medical consultation is recommended "
+                            "for early intervention and management.")
 
     # Disclaimer
     pdf.ln(10)
-    pdf.cell(200, 10, "Disclaimer: This report is generated by AI-based software. Please consult a doctor.", ln=True)
-
-    # Save the report
+    pdf.multi_cell(200, 10, "Disclaimer: This report is generated by AI-based software and is for informational purposes only. "
+                    "It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice "
+                    "of your physician or other qualified health provider with any questions you may have regarding a medical condition.")
+        # Save the report
     report_path = f"{patient_name}_vitiligo_report.pdf"
     pdf.output(report_path)
 
     return report_path
+
 
 # Function to predict vitiligo risk (replace with your actual model)
 def predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score):
@@ -605,8 +973,9 @@ st.write(f"Lifestyle Score: {lifestyle_score}")
 st.write(f"Psychological Score: {psychological_score}")
 st.write(f"Family Score: {family_score}")
 st.write(f"Combined Score: {combined_score}")
-
+  
 # Predict button and result
+
 if st.button("Predict Risk Level"):
     prediction = predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score)
 
@@ -617,32 +986,42 @@ if st.button("Predict Risk Level"):
     st.header("Predicted Vitiligo Risk Level")
     st.write(f"The predicted risk level is: {prediction}")
 
-# Button to generate and download the PDF report
+
+
 if st.button("Download Report"):
-    # Ensure prediction is available in session state
     
+    # Ensure prediction is available
     if "prediction" in st.session_state:
         prediction = st.session_state.prediction
-         # This will display the dictionary content
-        report_path = generate_vitiligo_report(
-        patient_name,
-        age,
-        gender,
-        date,
-        diet_score,
-        environmental_score,
-        lifestyle_score,
-        psychological_score,
-        family_score,
-        combined_score,
-        prediction
-    )
-
-    
         
+        # Generate insights and conclusion directly here
+        insights, conclusion = generate_insights_and_conclusion(
+            white_patches, patch_shape, expanding_patches, patch_duration, sensations, color_change, new_patches, visibility_in_sunlight
+        )
+
+        # Generate the vitiligo report with insights and conclusion
+        report_path = generate_vitiligo_report(
+            patient_name,
+            age,
+            gender,
+            date,
+            diet_score,
+            environmental_score,
+            lifestyle_score,
+            psychological_score,
+            family_score,
+            combined_score,
+            prediction,
+            insights,
+            conclusion
+        )
+
+        st.success(f"Report generated: {report_path}")
+
         # Provide download link
         with open(report_path, "rb") as file:
             pdf_data = file.read()  # Read the file content as binary data
             btn = st.download_button(label="Download Vitiligo Report", data=pdf_data, file_name=report_path, mime="application/pdf")
+    
     else:
         st.error("Please click on 'Predict Risk Level' before downloading the report.")
