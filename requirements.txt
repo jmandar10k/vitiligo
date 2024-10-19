@@ -4,4 +4,7 @@ datetime
 fpdf
 matplotlib
 reportlab
+cv2
+PIL
+tensorflow
 
