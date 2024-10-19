@@ -19,7 +19,7 @@ from PIL import Image
 from tensorflow.keras.models import load_model
 
 # Load the trained RESNET model
-resnet_model_path = r"C:\Users\jmand\OneDrive\Desktop\final\vitiligo-resnet-finetuned-01.h5"  # Update with the correct path
+resnet_model_path = "https://drive.google.com/drive/folders/16Du0YbD6yK8aTIcVzYnnQ8R_8VhiF4G-"  # Update with the correct path
 resnet_model = load_model(resnet_model_path)
 
 # Function to apply Wood's lamp effect
