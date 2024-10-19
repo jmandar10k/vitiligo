@@ -4,3 +4,6 @@ datetime
 fpdf
 matplotlib
 reportlab
+email
+smtplib
+os
