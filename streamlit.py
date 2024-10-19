@@ -14,63 +14,15 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 import os
-import cv2
-from PIL import Image
-from tensorflow.keras.models import load_model
-
-# Load the trained RESNET model
-resnet_model_path = r"https://drive.google.com/drive/folders/16Du0YbD6yK8aTIcVzYnnQ8R_8VhiF4G-"  # Update with the correct path
-resnet_model = load_model(resnet_model_path)
-
-# Function to apply Wood's lamp effect
-def apply_wood_lamp_effect(image):
-    # Convert the image to grayscale
-    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # Apply CLAHE to enhance contrast
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-    contrast_enhanced = clahe.apply(gray_image)
-
-    # Apply a blue color map to mimic the Wood's lamp appearance
-    wood_lamp_effect = cv2.applyColorMap(contrast_enhanced, cv2.COLORMAP_OCEAN)
-
-    # Blend the original image with the Wood's lamp effect for a more natural look
-    blended = cv2.addWeighted(image, 0.5, wood_lamp_effect, 0.5, 0)
-
-    return blended, contrast_enhanced
-
-# Function to create a heatmap for white patches (potential vitiligo areas)
-def create_heatmap(gray_image):
-    # Threshold to identify potential vitiligo patches
-    _, thresholded = cv2.threshold(gray_image, 180, 255, cv2.THRESH_BINARY)
-
-    # Create a heatmap
-    heatmap = cv2.applyColorMap(thresholded, cv2.COLORMAP_JET)
-
-    return heatmap
-
-# Function to convert the image to grayscale
-def convert_to_grayscale(image):
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-# Function to preprocess the input image for prediction (Resize to 224x224)
-def preprocess_image(image, target_size=(224, 224)):
-    image_resized = cv2.resize(image, target_size)  # Resize the image to (224, 224)
-    image_normalized = image_resized / 255.0  # Normalize pixel values to [0, 1]
-    return np.expand_dims(image_normalized, axis=0)  # Add batch dimension
-
-
-#questionnaire 
  
 @st.cache_resource
-def load_svc_model():
+def load_model():
+    # Provide the full path to your model file here
     with open('svc.pkl', 'rb') as file:
-        svc_model = pickle.load(file)
-    return svc_model
+        model = pickle.load(file)
+    return model
 
-# Load the SVC model
-svc_model = load_svc_model()
-
+model = load_model()
 
 # Function to combine all section scores
 def calculate_combined_score(family_score, diet_score, lifestyle_score, psychological_score, environmental_score):
@@ -785,81 +737,6 @@ if 'chart_path' not in st.session_state:
 if st.button("Generate Score Pie Chart"):
     st.session_state.chart_path = create_pie_chart(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
 
-
-# streamlit image
-
-def save_image(image, filename):
-    # Ensure the output directory exists
-    output_dir = "output_images"  # Replace with your desired output path
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Construct the full path
-    filepath = os.path.join(output_dir, filename)
-
-    # Save the image using cv2
-    if len(image.shape) == 2:  # If it's a grayscale image
-        cv2.imwrite(filepath, image)
-    else:  # If it's a color image
-        cv2.imwrite(filepath, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
-
-    return filepath  # Return the path for reference
-
-st.title("Vitiligo Detection with Wood's Lamp and Heatmap")
-
-st.write("Upload an image of skin, and apply the Wood's lamp effect, heatmap, grayscale image, and check for vitiligo detection.")
-
-# Image upload
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    # Load the uploaded image
-    image = Image.open(uploaded_file)
-    image = np.array(image)
-
-    # Preprocess the image for prediction (Ensure resizing to 224x224)
-    preprocessed_image = preprocess_image(image)
-
-    # Predict using the trained RESNET model
-    prediction = resnet_model.predict(preprocessed_image)[0]  # Get the first prediction
-    prediction_label = "Vitiligo Detected" if prediction >= 0.5 else "No Vitiligo Detected"
-
-    # Display the prediction result
-    st.subheader("Prediction Result")
-    st.write(f"**{prediction_label}**")
-
-    # Only generate outputs if vitiligo is detected
-    if prediction >= 0.5:
-        # Display the original image
-        st.subheader("Original Image")
-    st.image(image, channels="RGB")
-    original_image_path = save_image(image, "original_image.png")
-
-    # Apply Wood's lamp effect
-    wood_lamp_image, gray_contrast_image = apply_wood_lamp_effect(image)
-
-    wood_lamp_image_rgb = cv2.cvtColor(wood_lamp_image, cv2.COLOR_BGR2RGB)
-
-    # Display the Wood's lamp effect image
-    st.subheader("Wood's Lamp Effect")
-    st.image(wood_lamp_image, channels="BGR")
-    wood_lamp_image_path = save_image(wood_lamp_image_rgb, "wood_lamp_effect.png")
-
-    # Convert to grayscale and display
-    grayscale_image = convert_to_grayscale(image)
-    st.subheader("Grayscale Image")
-    st.image(grayscale_image, channels="GRAY")
-    grayscale_image_path = save_image(grayscale_image, "grayscale_image.png")
-
-    # Create and display heatmap of potential vitiligo areas
-    heatmap_image = create_heatmap(gray_contrast_image)
-    st.subheader("Heatmap of Potential Vitiligo Areas")
-    st.image(heatmap_image, channels="BGR")
-    heatmap_image_path = save_image(heatmap_image, "heatmap_image.png")
-
-# Footer
-st.write("This is a prototype. For accurate diagnosis, please consult a dermatologist.")
-
-
 # # Display the pie chart if it exists in session state
 # if st.session_state.chart_path:
 #     st.image(st.session_state.chart_path, caption="Score Distribution Pie Chart", use_column_width=True)
@@ -873,8 +750,7 @@ st.write("This is a prototype. For accurate diagnosis, please consult a dermatol
 from fpdf import FPDF
 
 def generate_vitiligo_report(patient_name, age, gender, date, diet_score, environmental_score, lifestyle_score, 
-                              psychological_score, family_score, combined_score, prediction, insights, conclusion,
-                              image, wood_lamp_image, grayscale_image, heatmap_image, prediction_label):
+                              psychological_score, family_score, combined_score, prediction, insights, conclusion):
     pdf = FPDF()
     pdf.add_page()
 
@@ -1016,12 +892,7 @@ def generate_vitiligo_report(patient_name, age, gender, date, diet_score, enviro
     chart_path = create_pie_chart(family_score, diet_score, lifestyle_score, psychological_score, environmental_score)
 
     # Insert the pie chart image
-
-    pdf.image(chart_path,x=50,y=None,w=100,h=100)
-
-
-    #image analysis
-
+    pdf.image(chart_path, x=50, y=None, w=100, h=100)
 
     # Overall Diagnosis
     pdf.ln(10)
@@ -1055,71 +926,12 @@ def generate_vitiligo_report(patient_name, age, gender, date, diet_score, enviro
         pdf.multi_cell(0, 10, "The assessment points to a high risk of vitiligo based on significant risk factors, "
                             "including personal or family history. Immediate medical consultation is recommended "
                             "for early intervention and management.")
-        
 
-
-        
-
-
-
-   
-  
     # Disclaimer
-    pdf.ln(20)
+    pdf.ln(10)
     pdf.multi_cell(200, 10, "Disclaimer: This report is generated by AI-based software and is for informational purposes only. "
                     "It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice "
                     "of your physician or other qualified health provider with any questions you may have regarding a medical condition.")
-    
-    pdf.ln(20)
-
-    pdf.set_font("Arial", 'B', 18)
-    pdf.set_text_color(255, 0, 0)  # Blue color
-    pdf.cell(200, 10, "Image Diagnosis section :", ln=True)
-
-    pdf.ln(10)
-
-   
-    # Add original image to PDF
-    pdf.set_font("Arial", 'B', 14)
-    original_image_path = save_image(image, "original_image.png")
-    pdf.cell(200, 10, "Uploaded Image:", ln=True)
-    pdf.image(original_image_path, x=10, y=pdf.get_y(), w=100, type='PNG')
-
-    pdf.ln(60)
-
-    # Add Wood's lamp effect image to PDF
-    pdf.set_font("Arial", 'B', 14)
-    wood_lamp_image_path = save_image(wood_lamp_image_rgb, "wood_lamp_image.png")
-    pdf.cell(200, 10, "Wood's Lamp Effect:", ln=True)
-    pdf.image(wood_lamp_image_path, x=10, y=pdf.get_y(), w=100, type='PNG')
-
-    pdf.ln(60)
-
-    # Add grayscale image to PDF
-    pdf.set_font("Arial", 'B', 14)
-    grayscale_image_path = save_image(grayscale_image, "grayscale_image.png")
-    pdf.cell(200, 10, "Grayscale Image:", ln=True)
-    pdf.image(grayscale_image_path, x=10, y=pdf.get_y(), w=100, type='PNG')
-
-    pdf.ln(60)
-
-    # Add heatmap image to PDF
-    pdf.set_font("Arial", 'B', 14)
-    heatmap_image_path = save_image(heatmap_image, "heatmap_image.png")
-    pdf.cell(200, 10, "Heatmap of Potential Vitiligo Areas:", ln=True)
-    pdf.image(heatmap_image_path, x=10, y=pdf.get_y(), w=100, type='PNG')
-
-    
-
-
-
-    
-
-
-
-
-
-
         # Save the report
     report_path = f"{patient_name}_vitiligo_report.pdf"
     pdf.output(report_path)
@@ -1133,7 +945,7 @@ def predict_vitiligo_risk(diet_score, environmental_score, lifestyle_score, psyc
     scores_input = np.array([[diet_score, environmental_score, lifestyle_score, psychological_score, family_score, combined_score]])
     
     # Make a prediction using the trained model
-    prediction = svc_model.predict( scores_input)
+    prediction = model.predict( scores_input)
 
     # Map the prediction to the risk level (customize this based on your model output)
     #risk_levels = {0: "Low Risk", 1: "Moderate Risk", 2: "High Risk"}  # Example mapping
@@ -1207,12 +1019,7 @@ if st.button("Download Report"):
             combined_score,
             prediction,
             insights,
-            conclusion,
-            image,
-            wood_lamp_image,
-            grayscale_image, 
-            heatmap_image, 
-            prediction_label
+            conclusion
         )
 
         st.success(f"Report generated: {report_path}")
